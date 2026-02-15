@@ -1,0 +1,101 @@
+// ─── CampusCart PostgreSQL Schema ──────────────────────────────────────────
+// Run: npx prisma migrate dev --name init
+// ────────────────────────────────────────────────────────────────────────────
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── USERS ────────────────────────────────────────────────────────────────────
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String?
+  major     String?
+  avatar    String?
+  joined    DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  items            Item[]
+  sentMessages     Message[]     @relation("SentMessages")
+  receivedMessages Message[]     @relation("ReceivedMessages")
+  wishlist         WishlistItem[]
+
+  @@map("users")
+}
+
+// ── ITEMS ────────────────────────────────────────────────────────────────────
+model Item {
+  id          Int       @id @default(autoincrement())
+  title       String
+  price       String
+  category    String
+  condition   String
+  description String?
+  image       String
+  sold        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // FK → users
+  sellerId    Int
+  seller      User      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // Relations
+  messages    Message[]
+  wishlists   WishlistItem[]
+
+  @@index([category])
+  @@index([sellerId])
+  @@map("items")
+}
+
+// ── MESSAGES ─────────────────────────────────────────────────────────────────
+model Message {
+  id        Int      @id @default(autoincrement())
+  content   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // FK → users (sender)
+  senderId   Int
+  sender     User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  // FK → users (receiver / seller)
+  receiverId Int
+  receiver   User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  // FK → items (what the chat is about)
+  itemId     Int?
+  item       Item? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([itemId])
+  @@map("messages")
+}
+
+// ── WISHLIST ─────────────────────────────────────────────────────────────────
+model WishlistItem {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  // FK → users
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // FK → items
+  itemId Int
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  // A user can only wishlist an item once
+  @@unique([userId, itemId])
+  @@map("wishlist")
+}

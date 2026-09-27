@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' })
-    const { password: _, ...safeUser } = user
+    const safeUser = { ...user }
+    delete (safeUser as { password?: string | null }).password
     return NextResponse.json({ token, user: safeUser })
   } catch (err) {
     console.error(err)

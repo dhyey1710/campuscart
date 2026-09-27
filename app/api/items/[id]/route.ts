@@ -33,7 +33,7 @@ export async function PATCH(
       data: { sold: true },
     })
     return NextResponse.json(item)
-  } catch (err) {
+  } catch (_err) {
     return NextResponse.json({ error: 'Failed to update item' }, { status: 500 })
   }
 }
@@ -46,7 +46,7 @@ export async function DELETE(
     const { id } = await params
     await prisma.item.delete({ where: { id: parseInt(id) } })
     return NextResponse.json({ success: true })
-  } catch (err) {
+  } catch (_err) {
     return NextResponse.json({ error: 'Failed to delete item' }, { status: 500 })
   }
 }

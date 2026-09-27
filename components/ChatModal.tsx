@@ -26,7 +26,7 @@ type ChatModalProps = {
 
 export default function ChatModal({
   isOpen, onClose,
-  currentUserId, currentUserName,
+  currentUserId, currentUserName: _currentUserName,
   sellerId, sellerName,
   itemId, itemTitle, itemImage,
 }: ChatModalProps) {

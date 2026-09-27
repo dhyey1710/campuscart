@@ -1,6 +1,6 @@
 'use client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SellItemModal from './SellItemModal'
 import AuthModal from './AuthModal'
@@ -10,13 +10,15 @@ export default function Navbar() {
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', onScroll)
+    window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
@@ -27,6 +29,17 @@ export default function Navbar() {
     } catch {}
   }, [])
 
+  // Close mobile menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false)
+      }
+    }
+    if (mobileMenuOpen) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [mobileMenuOpen])
+
   const handleSearch = (term: string) => {
     const params = new URLSearchParams(searchParams)
     if (term) params.set('search', term)
@@ -35,17 +48,16 @@ export default function Navbar() {
   }
 
   const handleSellClick = () => {
-    if (user) {
-      setIsSellOpen(true)
-    } else {
-      setIsAuthOpen(true)
-    }
+    setMobileMenuOpen(false)
+    if (user) setIsSellOpen(true)
+    else setIsAuthOpen(true)
   }
 
   const handleSignOut = () => {
     localStorage.removeItem('cc_token')
     localStorage.removeItem('cc_user')
     setUser(null)
+    setMobileMenuOpen(false)
     window.location.reload()
   }
 
@@ -62,6 +74,7 @@ export default function Navbar() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center h-16 gap-3 sm:gap-4">
+          {/* Logo */}
           <motion.a href="/" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/30">
               <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
@@ -71,6 +84,7 @@ export default function Navbar() {
             </span>
           </motion.a>
 
+          {/* Search bar */}
           <div className="flex-1 max-w-xl relative">
             <div className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl border transition-all duration-200 ${
               searchFocused
@@ -98,9 +112,10 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right-side actions — Desktop */}
+          <div className="hidden sm:flex items-center gap-2 ml-auto shrink-0">
             {user ? (
-              <div className="hidden sm:flex items-center gap-2">
+              <>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300">
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
                     {(user.name || 'U')[0].toUpperCase()}
@@ -112,11 +127,11 @@ export default function Navbar() {
                   className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors">
                   <span className="material-symbols-outlined text-base">logout</span>
                 </motion.button>
-              </div>
+              </>
             ) : (
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
                 onClick={() => setIsAuthOpen(true)}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <span className="material-symbols-outlined text-lg">person</span>
                 <span>Sign In</span>
               </motion.button>
@@ -125,8 +140,63 @@ export default function Navbar() {
               onClick={handleSellClick}
               className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-primary rounded-xl shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors">
               <span className="material-symbols-outlined text-lg">add</span>
-              <span className="hidden sm:block">Sell Item</span>
+              <span>Sell Item</span>
             </motion.button>
+          </div>
+
+          {/* Right-side actions — Mobile */}
+          <div className="flex sm:hidden items-center gap-2 ml-auto shrink-0" ref={menuRef}>
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
+              onClick={handleSellClick}
+              className="flex items-center justify-center w-9 h-9 text-white bg-primary rounded-xl shadow-md shadow-primary/20">
+              <span className="material-symbols-outlined text-lg">add</span>
+            </motion.button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 active:scale-95 transition-transform"
+            >
+              <span className="material-symbols-outlined text-xl">
+                {mobileMenuOpen ? 'close' : 'menu'}
+              </span>
+            </button>
+
+            {/* Mobile dropdown */}
+            <AnimatePresence>
+              {mobileMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="absolute top-full right-4 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-black/10 border border-slate-200 dark:border-slate-700 overflow-hidden"
+                >
+                  {user ? (
+                    <>
+                      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                          {(user.name || 'U')[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user.name}</p>
+                          <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                        </div>
+                      </div>
+                      <button onClick={handleSignOut}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors">
+                        <span className="material-symbols-outlined text-lg">logout</span>
+                        Sign Out
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => { setMobileMenuOpen(false); setIsAuthOpen(true) }}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-primary hover:bg-primary/5 transition-colors">
+                      <span className="material-symbols-outlined text-lg">person</span>
+                      Sign In / Sign Up
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.nav>

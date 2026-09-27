@@ -1,5 +1,6 @@
 'use client'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 
 const categories = [
@@ -15,6 +16,17 @@ export default function CategoryChips() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const active = searchParams.get('category') || 'All'
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll active chip into view on mobile
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+    const activeBtn = container.querySelector('[data-active="true"]') as HTMLElement
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    }
+  }, [active])
 
   const handleClick = (name: string) => {
     const params = new URLSearchParams(searchParams)
@@ -28,19 +40,23 @@ export default function CategoryChips() {
       <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3 px-0.5">
         Browse by Category
       </h2>
-      <div className="flex gap-2.5 overflow-x-auto hide-scrollbar pb-1">
+      <div
+        ref={scrollRef}
+        className="flex gap-2.5 overflow-x-auto hide-scrollbar pb-1 snap-x snap-mandatory scroll-px-4 -mx-4 px-4 sm:mx-0 sm:px-0"
+      >
         {categories.map((cat, i) => {
           const isActive = active === cat.name
           return (
             <motion.button
               key={cat.name}
+              data-active={isActive}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06, duration: 0.35 }}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleClick(cat.name)}
-              className={`relative flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold shrink-0 transition-colors duration-200 border ${
+              className={`relative flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold shrink-0 snap-start transition-colors duration-200 border active:scale-95 ${
                 isActive
                   ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/40 hover:text-primary dark:hover:text-primary'

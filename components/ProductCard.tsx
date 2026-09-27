@@ -14,10 +14,10 @@ type ProductCardProps = {
 }
 
 const conditionColors: Record<string, string> = {
-  'New': 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  'Like New': 'bg-sky-50 text-sky-700 border-sky-100',
-  'Good': 'bg-amber-50 text-amber-700 border-amber-100',
-  'Fair': 'bg-rose-50 text-rose-700 border-rose-100',
+  'New': 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
+  'Like New': 'bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800',
+  'Good': 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
+  'Fair': 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800',
 }
 
 export default function ProductCard({ id, title, price, image, category, condition, index = 0 }: ProductCardProps) {
@@ -30,20 +30,22 @@ export default function ProductCard({ id, title, price, image, category, conditi
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.07, ease: [0.25, 0.46, 0.45, 0.94] }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.45, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
       whileHover={{ y: -4 }}
       className="group bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-slate-200/60 dark:hover:shadow-black/30 transition-shadow duration-300 flex flex-col cursor-pointer"
     >
       <Link href={`/item/${id}`} className="flex flex-col flex-1">
         {/* Image */}
-        <div className="relative h-52 shrink-0 overflow-hidden bg-slate-100 dark:bg-slate-800">
+        <div className="relative h-44 sm:h-52 shrink-0 overflow-hidden bg-slate-100 dark:bg-slate-800">
           {!imgLoaded && (
             <div className="absolute inset-0 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 animate-pulse" />
           )}
           <img
             src={image}
             alt={title}
+            loading="lazy"
             onLoad={() => setImgLoaded(true)}
             className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
@@ -53,10 +55,10 @@ export default function ProductCard({ id, title, price, image, category, conditi
               {condition}
             </span>
           </div>
-          {/* Wishlist */}
+          {/* Wishlist — always visible on mobile (no hover on touch) */}
           <button
             onClick={(e) => { e.preventDefault(); setWishlisted(w => !w) }}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/80 backdrop-blur flex items-center justify-center shadow-sm border border-white/50 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 active:scale-95"
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/80 backdrop-blur flex items-center justify-center shadow-sm border border-white/50 dark:border-slate-700 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:scale-110 active:scale-95"
           >
             <span
               className={`material-symbols-outlined text-lg transition-colors ${wishlisted ? 'text-rose-500' : 'text-slate-400'}`}

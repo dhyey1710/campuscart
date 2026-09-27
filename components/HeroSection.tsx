@@ -1,6 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useRef, useState, useEffect } from 'react'
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 
 const stats = [
   { value: '2,400+', label: 'Active Listings' },
@@ -9,14 +9,29 @@ const stats = [
 ]
 
 export default function HeroSection() {
-  const [offsetY, setOffsetY] = useState(0)
+  const heroRef = useRef<HTMLElement>(null)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    const h = () => setOffsetY(window.scrollY)
-    window.addEventListener('scroll', h, { passive: true })
-    return () => window.removeEventListener('scroll', h)
+    const check = () => setIsMobile(window.innerWidth < 640)
+    check()
+    window.addEventListener('resize', check, { passive: true })
+    return () => window.removeEventListener('resize', check)
   }, [])
+
+  // GPU-accelerated scroll-linked transforms
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  })
+
+  // Parallax layers — reduced on mobile for perf
+  const dotY = useTransform(scrollYProgress, [0, 1], ['0%', isMobile ? '8%' : '18%'])
+  const contentY = useTransform(scrollYProgress, [0, 1], ['0%', isMobile ? '6%' : '14%'])
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
+  const statsY = useTransform(scrollYProgress, [0, 1], ['0%', isMobile ? '3%' : '8%'])
+  const blobScale = useTransform(scrollYProgress, [0, 1], [1, 1.15])
 
   useEffect(() => {
     document.body.style.overflow = showHowItWorks ? 'hidden' : ''
@@ -25,28 +40,47 @@ export default function HeroSection() {
 
   return (
     <>
-      <section className="mb-10 overflow-hidden rounded-3xl">
+      <section ref={heroRef} className="mb-10 overflow-hidden rounded-3xl">
         <div
           className="relative bg-primary px-6 sm:px-10 py-16 sm:py-24 text-white overflow-hidden"
           style={{ minHeight: '360px' }}
         >
-          {/* Dot grid parallax */}
-          <div
-            className="absolute inset-0 opacity-[0.07] pointer-events-none"
+          {/* Dot grid — parallax layer 1 (slowest) */}
+          <motion.div
+            className="absolute inset-0 opacity-[0.07] pointer-events-none will-change-transform"
             style={{
-              transform: `translateY(${offsetY * 0.18}px)`,
+              y: dotY,
               backgroundImage: 'radial-gradient(circle at 2px 2px, white 1.5px, transparent 0)',
               backgroundSize: '28px 28px',
             }}
           />
-          {/* Gradient blobs */}
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none" />
 
-          {/* Content */}
+          {/* Gradient blobs — parallax layer 2 */}
           <motion.div
-            className="relative z-10 max-w-3xl mx-auto text-center"
-            style={{ transform: `translateY(${offsetY * 0.12}px)`, opacity: Math.max(0, 1 - offsetY / 500) }}
+            className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none will-change-transform"
+            style={{ scale: blobScale }}
+          />
+          <motion.div
+            className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none will-change-transform"
+            style={{ scale: blobScale }}
+          />
+
+          {/* Floating orbs for depth */}
+          <motion.div
+            className="absolute top-20 left-[15%] w-3 h-3 rounded-full bg-white/20 blur-[1px] pointer-events-none"
+            animate={{ y: [0, -12, 0], opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.div
+            className="absolute bottom-20 right-[20%] w-2 h-2 rounded-full bg-white/15 blur-[1px] pointer-events-none"
+            animate={{ y: [0, -8, 0], opacity: [0.2, 0.5, 0.2] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+          />
+
+          {/* Content — parallax layer 3 (fastest) */}
+          <motion.div
+            className="relative z-10 max-w-3xl mx-auto text-center will-change-transform"
+            style={{ y: contentY, opacity: contentOpacity }}
           >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -72,7 +106,7 @@ export default function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.35 }}
-              className="text-lg sm:text-xl text-white/80 mb-8 max-w-xl mx-auto font-medium leading-relaxed"
+              className="text-base sm:text-xl text-white/80 mb-8 max-w-xl mx-auto font-medium leading-relaxed"
             >
               Verified student listings, zero fees, and safe on-campus meetups.
             </motion.p>
@@ -87,7 +121,7 @@ export default function HeroSection() {
                 whileHover={{ scale: 1.03, boxShadow: '0 12px 30px rgba(0,0,0,0.2)' }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => document.getElementById('listings')?.scrollIntoView({ behavior: 'smooth' })}
-                className="bg-white text-primary px-8 py-3.5 rounded-2xl font-bold text-base shadow-xl"
+                className="bg-white text-primary px-8 py-3.5 rounded-2xl font-bold text-base shadow-xl active:scale-95 transition-transform"
               >
                 Browse Deals
               </motion.button>
@@ -95,19 +129,20 @@ export default function HeroSection() {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setShowHowItWorks(true)}
-                className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-3.5 rounded-2xl font-bold text-base backdrop-blur-sm transition-colors"
+                className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-3.5 rounded-2xl font-bold text-base backdrop-blur-sm transition-colors active:scale-95"
               >
                 How it works
               </motion.button>
             </motion.div>
           </motion.div>
 
-          {/* Stats bar */}
+          {/* Stats bar — slight parallax */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.7 }}
-            className="relative z-10 mt-12 flex justify-center gap-8 sm:gap-16"
+            className="relative z-10 mt-12 flex justify-center gap-8 sm:gap-16 will-change-transform"
+            style={{ y: statsY }}
           >
             {stats.map(({ value, label }) => (
               <div key={label} className="text-center">
@@ -116,13 +151,21 @@ export default function HeroSection() {
               </div>
             ))}
           </motion.div>
+
+          {/* Bottom wave divider */}
+          <div className="absolute bottom-0 left-0 right-0 overflow-hidden pointer-events-none">
+            <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto block" preserveAspectRatio="none">
+              <path d="M0,48 C360,80 720,16 1080,48 C1260,64 1380,56 1440,48 L1440,80 L0,80 Z"
+                className="fill-background-light dark:fill-background-dark" />
+            </svg>
+          </div>
         </div>
       </section>
 
       {/* How It Works Modal */}
       <AnimatePresence>
         {showHowItWorks && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -135,8 +178,11 @@ export default function HeroSection() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-              className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700"
+              className="relative w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700"
             >
+              {/* Mobile handle */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full sm:hidden" />
+
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-3">
@@ -157,7 +203,7 @@ export default function HeroSection() {
               <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
                 <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                   <strong className="text-slate-900 dark:text-white">CampusCart</strong> is the exclusive student marketplace built for{' '}
-                  <strong className="text-primary">SRM Institute of Science and Technology</strong>. It's designed to make buying and selling among SRM students safe, easy, and completely free.
+                  <strong className="text-primary">SRM Institute of Science and Technology</strong>. It&apos;s designed to make buying and selling among SRM students safe, easy, and completely free.
                 </p>
 
                 <div className="space-y-4">
